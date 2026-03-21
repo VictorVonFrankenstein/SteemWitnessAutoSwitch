@@ -16,11 +16,11 @@ const runInterval = functions.runInterval;
 const disabled_key = "STM1111111111111111111111111111111114T1Anm";
 
 // Use AWS with config
-const sns = new AWS.SNS({
+const sns = config.aws ? new AWS.SNS({
     region: config.aws.region,
     accessKeyId: config.aws.accessKeyId,
     secretAccessKey: config.aws.secretAccessKey
-})
+}) : null
 
 const transporter = nodemailer.createTransport({
     port: config.email.port,               // true for 465, false for other ports
@@ -54,7 +54,7 @@ function getWitness(id) {
 }
 
 function mail(subject, body) {
-    const text = `You receive this alert because ${config.account} started to miss blocks \n`
+    const text = `${body} \n`
     const htmlText = text.replace('\n', '<br/>')
     transporter.sendMail({
         from: config.email.from,
@@ -71,16 +71,20 @@ function mail(subject, body) {
 }
 
 function sms(subject) {
+    if (sns === null) {
+        console.warn('not set aws config!');
+        return;
+    }
     sns.publish({
-        Message: `${subject} ${config.account} started to miss blocks`,
-        PhoneNumber: config.sms.number
+        Message: `${config.account} ${subject}`,
+        PhoneNumber: config.aws.number
     }, function (err, result) {
         console.log(err, result)
         if (err) {
             console.log(err)
         }
         lastSms = new Date().getTime() + (1 * 24 * 60 * 60 * 1000)
-        console.log('sent sms to ' + config.sms.number)
+        console.log('sent sms to ' + config.aws.number)
     })
 }
 
